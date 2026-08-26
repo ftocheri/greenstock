@@ -35,6 +35,8 @@ supplier restock feeds through a small, testable pipeline.
   (`routes/console.php`) as a simulated nightly sync.
 - **A dashboard and product catalog** built with Vue 3 + Inertia.js: stat tiles, a 6-month
   stock-movement chart, recent import runs, and a searchable/sortable product table.
+- **An admin area for manual stock adjustments** (`/admin/inventory`), restricted to a single
+  designated admin account rather than any logged-in user — see "Admin access" below.
 
 ## Why a ledger instead of a stock column
 
@@ -48,7 +50,7 @@ SKU" for free.
 
 ## Tech stack
 
-- Laravel 11, SQLite (ships in the repo — zero setup to run)
+- Laravel 12, SQLite locally / Postgres in production (ships with SQLite — zero setup to run)
 - Vue 3 + Inertia.js + Tailwind CSS (via Laravel Breeze)
 - Chart.js / vue-chartjs for the dashboard chart
 - PHPUnit feature tests
@@ -88,6 +90,23 @@ immediately with no extra setup — the point being demonstrated either way. Swi
 `database` or `redis` and running `php artisan queue:work` makes the same job process
 asynchronously with no code changes, which is the actual point of using `ShouldQueue` here.
 
+## Admin access
+
+`/admin/inventory` lets one designated account record manual stock corrections (a signed
+delta + a required reason, landing on the same `inventory_movements` ledger as everything
+else — `type = 'adjustment'`). It's restricted to whichever user has `is_admin = true`, not
+just "any logged-in user," since the live copy of this app is a public URL anyone can register
+on.
+
+There's no admin account baked into the seeder or the repo. Set `ADMIN_EMAIL` /
+`ADMIN_PASSWORD` in your environment and run:
+
+```bash
+php artisan admin:ensure
+```
+
+This is idempotent — safe to re-run any time you want to rotate the password.
+
 ## Tests
 
 ```bash
@@ -95,11 +114,49 @@ php artisan test
 ```
 
 Covers the pipeline's happy path, its skip/validation logic (missing SKU, unknown SKU, invalid
-quantity, invalid date), SKU normalization, and the product listing/search endpoint.
+quantity, invalid date), SKU normalization, the product listing/search endpoint, and the admin
+inventory endpoints (403 for non-admins, successful adjustment, validation).
+
+## Live demo & deployment
+
+The live copy runs on Render's free web service (compute) with a free Neon Postgres database
+(data) — split deliberately, since Render's free tier has no persistent disk (a SQLite file
+there would reset on every restart, and free-tier containers restart often — any 15-minute-idle
+sleep is a fresh one). Neon's free Postgres is a separate managed service, so data survives
+regardless of what Render's container does. Trade-off: a cold container takes ~30-60s to wake
+after being idle.
+
+**One-time setup:**
+
+1. Create a free [Neon](https://neon.tech) project and copy its connection string.
+2. On [Render](https://render.com), create a new Web Service from this repo — it picks up the
+   `Dockerfile` automatically, or apply `render.yaml` directly as a Blueprint.
+3. Set these environment variables on Render:
+   - `DB_CONNECTION=pgsql`
+   - `DB_URL` = the Neon connection string (Laravel reads `DB_URL`, not the more common
+     `DATABASE_URL` — see `.env.example`)
+   - `APP_KEY` — generate one locally with `php artisan key:generate --show` and paste it in
+   - `APP_URL` — the Render-assigned URL, once you have it
+   - `APP_ENV=production`, `APP_DEBUG=false`
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — your choice; nothing admin-related is ever committed
+4. After the first deploy, open Render's Shell tab once and run:
+   ```bash
+   php artisan db:seed --force
+   php artisan admin:ensure
+   ```
+   (`--force` matters: Laravel's `db:seed` prompts for confirmation when `APP_ENV=production`,
+   and that prompt silently cancels the command in a non-interactive shell.)
+   Both are one-time. `docker-entrypoint.sh` runs `php artisan migrate --force` on every boot
+   (safe/idempotent), but deliberately does **not** run `db:seed` automatically — the seeder
+   isn't idempotent, so re-running it on every free-tier wake-from-sleep would keep appending
+   duplicate products and movements forever.
+
+From then on, pushing to `main` auto-redeploys and picks up any new migrations. Data persists
+in Neon independent of whatever Render's container does.
 
 ## Roadmap (not built in this pass)
 
-- Admin CRUD for products/suppliers instead of read-only views
+- Admin CRUD for products/suppliers/categories (this pass only covers stock adjustments)
+- Order management (fulfill/cancel) from the admin area
 - CSV upload through the UI instead of CLI-only
-- A live deploy (Render/Fly.io) linked here
 - GitHub Actions running `php artisan test` on push

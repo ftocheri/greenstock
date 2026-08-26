@@ -45,6 +45,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Products
                                 </NavLink>
+                                <NavLink
+                                    v-if="$page.props.auth.user.is_admin"
+                                    :href="route('admin.inventory.index')"
+                                    :active="route().current('admin.*')"
+                                >
+                                    Admin
+                                </NavLink>
                             </div>
                         </div>
 
@@ -157,6 +164,13 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('products.*')"
                         >
                             Products
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user.is_admin"
+                            :href="route('admin.inventory.index')"
+                            :active="route().current('admin.*')"
+                        >
+                            Admin
                         </ResponsiveNavLink>
                     </div>
 

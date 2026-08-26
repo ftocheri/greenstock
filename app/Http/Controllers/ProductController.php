@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -13,15 +12,9 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $stockSubquery = DB::table('inventory_movements')
-            ->select('product_id')
-            ->selectRaw("SUM(CASE WHEN type = 'in' THEN quantity WHEN type = 'out' THEN -quantity ELSE quantity END) as stock")
-            ->groupBy('product_id');
-
         $query = Product::query()
             ->with(['category', 'supplier'])
-            ->leftJoinSub($stockSubquery, 'stock', 'stock.product_id', '=', 'products.id')
-            ->select('products.*', DB::raw('COALESCE(stock.stock, 0) as current_stock'));
+            ->withCurrentStock();
 
         if ($search = trim((string) $request->input('search'))) {
             $query->where(function ($q) use ($search) {
