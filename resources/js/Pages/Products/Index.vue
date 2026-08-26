@@ -40,24 +40,24 @@ function sortIndicator(column) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">
                 Products
             </h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden rounded-lg bg-white p-6 shadow-sm">
+                <div class="overflow-hidden rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                     <form @submit.prevent="submitSearch" class="mb-4 flex gap-2">
                         <input
                             v-model="search"
                             type="text"
                             placeholder="Search by name or SKU..."
-                            class="w-full max-w-sm rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                            class="w-full max-w-sm rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                         />
                         <button
                             type="submit"
-                            class="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                            class="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500"
                         >
                             Search
                         </button>
@@ -65,7 +65,7 @@ function sortIndicator(column) {
 
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="text-gray-500">
+                            <tr class="text-gray-500 dark:text-gray-400">
                                 <th class="cursor-pointer pb-2" @click="sortBy('sku')">
                                     SKU{{ sortIndicator('sku') }}
                                 </th>
@@ -86,38 +86,38 @@ function sortIndicator(column) {
                             <tr
                                 v-for="product in products.data"
                                 :key="product.id"
-                                class="border-t border-gray-100"
+                                class="border-t border-gray-100 dark:border-gray-700"
                             >
                                 <td class="py-2">
                                     <Link
                                         :href="route('products.show', product.id)"
-                                        class="text-green-700 hover:underline"
+                                        class="text-green-700 hover:underline dark:text-green-400"
                                     >
                                         {{ product.sku }}
                                     </Link>
                                 </td>
-                                <td class="py-2 text-gray-900">{{ product.name }}</td>
-                                <td class="py-2 text-gray-500">{{ product.category?.name }}</td>
-                                <td class="py-2 text-gray-500">{{ product.supplier?.name }}</td>
+                                <td class="py-2 text-gray-900 dark:text-gray-100">{{ product.name }}</td>
+                                <td class="py-2 text-gray-500 dark:text-gray-400">{{ product.category?.name }}</td>
+                                <td class="py-2 text-gray-500 dark:text-gray-400">{{ product.supplier?.name }}</td>
                                 <td class="py-2">
                                     <span
                                         :class="
                                             product.current_stock <= product.reorder_threshold
-                                                ? 'rounded bg-amber-100 px-2 py-0.5 text-amber-800'
-                                                : 'text-gray-900'
+                                                ? 'rounded bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                                                : 'text-gray-900 dark:text-gray-100'
                                         "
                                     >
                                         {{ product.current_stock }}
                                     </span>
                                 </td>
-                                <td class="py-2 text-gray-900">
+                                <td class="py-2 text-gray-900 dark:text-gray-100">
                                     ${{ Number(product.unit_price).toFixed(2) }}
                                 </td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <div v-if="products.data.length === 0" class="py-6 text-sm text-gray-500">
+                    <div v-if="products.data.length === 0" class="py-6 text-sm text-gray-500 dark:text-gray-400">
                         No products match that search.
                     </div>
 
@@ -129,7 +129,7 @@ function sortIndicator(column) {
                             v-html="link.label"
                             class="rounded px-3 py-1 text-sm"
                             :class="[
-                                link.active ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100',
+                                link.active ? 'bg-gray-800 text-white dark:bg-gray-600' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700',
                                 !link.url && 'pointer-events-none opacity-50',
                             ]"
                         />
