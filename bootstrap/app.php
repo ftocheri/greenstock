@@ -19,6 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+
+        // Render terminates TLS at its edge and forwards plain HTTP to the
+        // container, so without this Laravel sees every request as HTTP and
+        // generates http:// asset/route URLs even though the real page is
+        // HTTPS — trusting the proxy's X-Forwarded-* headers fixes that at
+        // the source instead of patching every URL individually. Safe to
+        // trust all proxies here since the container has no other public
+        // ingress — Render's edge is the only thing that can reach it.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
