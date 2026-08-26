@@ -133,8 +133,13 @@ after being idle.
    `Dockerfile` automatically, or apply `render.yaml` directly as a Blueprint.
 3. Set these environment variables on Render:
    - `DB_CONNECTION=pgsql`
-   - `DB_URL` = the Neon connection string (Laravel reads `DB_URL`, not the more common
-     `DATABASE_URL` — see `.env.example`)
+   - `DB_URL` = Neon's **direct** (non-pooled) connection string — the hostname **without**
+     `-pooler` in it (Laravel reads `DB_URL`, not the more common `DATABASE_URL` — see
+     `.env.example`). Neon's pooled endpoint runs PgBouncer in transaction-pooling mode, which
+     doesn't handle the multi-statement DDL that migrations run — confirmed directly: the
+     pooled string failed partway through the very first migration with a cryptic "current
+     transaction is aborted" error, while the direct string ran clean. Traffic here is low
+     enough that pooling isn't needed anyway, so just use the direct string everywhere.
    - `APP_KEY` — generate one locally with `php artisan key:generate --show` and paste it in
    - `APP_URL` — the Render-assigned URL, once you have it
    - `APP_ENV=production`, `APP_DEBUG=false`
