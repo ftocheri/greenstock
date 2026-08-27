@@ -167,50 +167,55 @@ class InventoryQueryAssistant
         return $filters;
     }
 
+    /**
+     * Deliberately a conventional (non-strict) tool schema, not Anthropic's newer strict/
+     * structured-output mode — that mode returned a 400 invalid_request_error against the live
+     * API (likely needs a beta header or different syntax this app doesn't use), and dropping
+     * it costs nothing real: every field here is re-validated from scratch in validate()
+     * regardless of what the schema itself would have enforced, so schema-level strictness was
+     * always a nice-to-have layer, never the actual security boundary.
+     */
     private function toolDefinition(): array
     {
         return [
             'name' => 'apply_inventory_filter',
-            'description' => 'Apply a structured filter to the product inventory listing based on the user\'s natural-language request.',
-            'strict' => true,
+            'description' => 'Apply a structured filter to the product inventory listing based on the user\'s natural-language request. Omit any field the request does not imply.',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
                     'search' => [
-                        'type' => ['string', 'null'],
+                        'type' => 'string',
                         'description' => 'Substring to match against product name or SKU.',
                     ],
                     'supplier' => [
-                        'type' => ['string', 'null'],
+                        'type' => 'string',
                         'description' => 'Substring to match against supplier name.',
                     ],
                     'category' => [
-                        'type' => ['string', 'null'],
+                        'type' => 'string',
                         'description' => 'Substring to match against category name.',
                     ],
                     'min_stock' => [
-                        'type' => ['integer', 'null'],
+                        'type' => 'integer',
                         'description' => 'Minimum current stock, inclusive.',
                     ],
                     'max_stock' => [
-                        'type' => ['integer', 'null'],
+                        'type' => 'integer',
                         'description' => 'Maximum current stock, inclusive.',
                     ],
                     'low_stock' => [
-                        'type' => ['boolean', 'null'],
+                        'type' => 'boolean',
                         'description' => 'True only if the user specifically asked for items at or below their reorder threshold.',
                     ],
                     'sort' => [
-                        'type' => ['string', 'null'],
-                        'enum' => [...ProductController::SORTABLE, null],
+                        'type' => 'string',
+                        'enum' => ProductController::SORTABLE,
                     ],
                     'direction' => [
-                        'type' => ['string', 'null'],
-                        'enum' => ['asc', 'desc', null],
+                        'type' => 'string',
+                        'enum' => ['asc', 'desc'],
                     ],
                 ],
-                'required' => ['search', 'supplier', 'category', 'min_stock', 'max_stock', 'low_stock', 'sort', 'direction'],
-                'additionalProperties' => false,
             ],
         ];
     }

@@ -61,16 +61,17 @@ and that filter is applied through the *exact same* query-building code
 story is one sentence: **the model never gets more authority over the database than a human
 typing URL query params already has.**
 
-- **Forced, schema-constrained output.** The request forces a single tool call
-  (`tool_choice`) with `strict: true` on the tool definition, so Anthropic enforces the
-  filter's shape (types, enums, no extra fields) before the response even comes back — the
-  model can return `{"supplier": "Wisoky", "max_stock": 20}`-shaped data or nothing at all, never
-  free-form text and never SQL.
-- **Re-validated anyway.** Strict mode doesn't enforce numeric ranges, so a hallucinated
-  `min_stock: -50` is still clamped server-side, and `sort` is re-checked against the identical
-  whitelist `ProductController::index` already uses for manual search — that whitelist, not
-  request validation, is what actually prevents ORDER-BY injection, since column names can't be
-  parameterized.
+- **Forced tool call, but re-validated from scratch, not trusted.** The request forces a
+  single tool call (`tool_choice`) with a JSON schema describing the filter's shape
+  (types/enums) — the model can return `{"supplier": "Wisoky", "max_stock": 20}`-shaped data or
+  nothing at all, never free-form text and never SQL. The schema is advisory, not enforced —
+  Anthropic's newer strict/structured-output mode would enforce it server-side, but it returned
+  a 400 against the live API for this tool shape and wasn't worth chasing down, since the app
+  never actually depended on schema-level enforcement in the first place: `InventoryQueryAssistant::validate()`
+  independently re-checks every field regardless of what the model returns — a hallucinated
+  `min_stock: -50` is clamped, and `sort` is re-checked against the identical whitelist
+  `ProductController::index` already uses for manual search. That whitelist, not the schema, is
+  what actually prevents ORDER-BY injection, since column names can't be parameterized.
 - **Grounded, not guessing.** The system prompt lists the real current supplier and category
   names (cached briefly) so the model matches against what actually exists instead of inventing
   a close-but-wrong name.
