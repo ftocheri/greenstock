@@ -1,0 +1,26 @@
+{
+  "name": "GreenStock",
+  "pitch": "A live Laravel inventory pipeline for a plant nursery, built from scratch.",
+  "description": "A from-scratch demo of a nursery/garden-supply inventory system, showing a Laravel ETL pipeline, database schema design, and a Vue 3 + Inertia front end, end to end — deployed as a real, publicly reachable demo rather than a localhost-only project.",
+  "tech": ["Laravel", "PHP", "Vue 3", "Inertia.js", "PostgreSQL", "Chart.js", "Docker"],
+  "repoUrl": "https://github.com/ftocheri/greenstock",
+  "liveUrl": "https://greenstock-ztvq.onrender.com",
+  "highlights": [
+    {
+      "title": "Inventory as a ledger, not a counter",
+      "body": "Stock isn't a mutable column on products — it's derived by summing an append-only inventory_movements table (in / out / adjustment). The number can never drift out of sync with the history that produced it, and that history is a useful audit trail on its own."
+    },
+    {
+      "title": "A real pipeline, not just a script",
+      "body": "A supplier CSV feed runs through five single-purpose stages composed with Laravel's Illuminate\\Pipeline\\Pipeline: ValidateRow → NormalizeSku → UpsertProduct → RecordMovement → FlagLowStock. Each stage is independently testable and does exactly one job."
+    },
+    {
+      "title": "Restricted admin controls",
+      "body": "A single admin-flagged account can issue manual stock adjustments with a required reason. Every adjustment lands on the same movement ledger as automated imports, so manual corrections stay part of the audit trail instead of bypassing it."
+    },
+    {
+      "title": "Actually deployed, not just runnable",
+      "body": "Docker multi-stage build (Composer → Vite asset build → PHP runtime), running on Render's free tier against a separate managed Postgres database (Neon) so data survives container restarts. Chosen deliberately over a localhost-only demo — it forced real decisions about trusted proxies, env config, and cold starts."
+    }
+  ]
+}

@@ -159,9 +159,15 @@ after being idle.
 From then on, pushing to `main` auto-redeploys and picks up any new migrations. Data persists
 in Neon independent of whatever Render's container does.
 
+## CI
+
+`.github/workflows/ci.yml` runs the PHPUnit suite on every push to `main`, then (on success)
+notifies [the portfolio site](https://github.com/ftocheri/ftocheri.github.io) to rebuild, so a
+change to `portfolio.json` here shows up there automatically — see that repo's README for how
+the sync works.
+
 ## Roadmap (not built in this pass)
 
 - Admin CRUD for products/suppliers/categories (this pass only covers stock adjustments)
 - Order management (fulfill/cancel) from the admin area
 - CSV upload through the UI instead of CLI-only
-- GitHub Actions running `php artisan test` on push

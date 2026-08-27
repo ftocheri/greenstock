@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend tests (PHPUnit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite, mbstring, bcmath
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run tests
+        run: php artisan test
+
+  notify-portfolio:
+    name: Notify portfolio site
+    needs: [backend-tests]
+    runs-on: ubuntu-latest
+    # Explicit guard rather than relying on `needs:` alone — this workflow currently only
+    # triggers on push anyway, but this keeps the job inert if a pull_request trigger is ever
+    # added later, and it's a secret-bearing step so it costs nothing to be explicit here.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger portfolio rebuild
+        run: |
+          curl -f -X POST \
+            -H "Authorization: token ${{ secrets.PORTFOLIO_DISPATCH_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/ftocheri/ftocheri.github.io/actions/workflows/deploy.yml/dispatches \
+            -d '{"ref":"main"}'
