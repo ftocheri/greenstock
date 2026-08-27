@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProductAiSearchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,11 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    // Must be registered before /products/{product} — otherwise "ai-search" would be captured
+    // as the {product} route-model-binding parameter instead of matching this route.
+    Route::get('/products/ai-search', ProductAiSearchController::class)
+        ->middleware('throttle:10,1')
+        ->name('products.ai-search');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 });
 

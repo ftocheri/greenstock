@@ -37,6 +37,9 @@ supplier restock feeds through a small, testable pipeline.
   stock-movement chart, recent import runs, and a searchable/sortable product table.
 - **An admin area for manual stock adjustments** (`/admin/inventory`), restricted to a single
   designated admin account rather than any logged-in user — see "Admin access" below.
+- **Natural-language product search** — "Ask about your inventory" on the products page
+  translates a plain-English query into the same filters the manual search box already
+  produces. See "Natural-language search" below for the design.
 
 ## Why a ledger instead of a stock column
 
@@ -48,10 +51,48 @@ single aggregated subquery rather than N+1 lookups — see `ProductController::i
 number is always correct by construction, and the ledger itself answers "what happened to this
 SKU" for free.
 
+## Natural-language search
+
+Typing something like *"everything from Wisoky under 20 units"* into the "Ask about your
+inventory" box on the products page sends that text to the Anthropic API
+(`app/Services/InventoryQueryAssistant.php`), which translates it into a structured filter —
+and that filter is applied through the *exact same* query-building code
+(`ProductController::index`) the manual search box already uses. The design's whole safety
+story is one sentence: **the model never gets more authority over the database than a human
+typing URL query params already has.**
+
+- **Forced, schema-constrained output.** The request forces a single tool call
+  (`tool_choice`) with `strict: true` on the tool definition, so Anthropic enforces the
+  filter's shape (types, enums, no extra fields) before the response even comes back — the
+  model can return `{"supplier": "Wisoky", "max_stock": 20}`-shaped data or nothing at all, never
+  free-form text and never SQL.
+- **Re-validated anyway.** Strict mode doesn't enforce numeric ranges, so a hallucinated
+  `min_stock: -50` is still clamped server-side, and `sort` is re-checked against the identical
+  whitelist `ProductController::index` already uses for manual search — that whitelist, not
+  request validation, is what actually prevents ORDER-BY injection, since column names can't be
+  parameterized.
+- **Grounded, not guessing.** The system prompt lists the real current supplier and category
+  names (cached briefly) so the model matches against what actually exists instead of inventing
+  a close-but-wrong name.
+- **Provably no more authority than a human**, not just by design intent: `tests/Feature/ProductAiSearchTest.php`
+  includes a prompt-injection-shaped test (a fake model response with a SQL-looking string as
+  the `supplier` field) asserting zero matching rows and no SQL error — Eloquent's parameterized
+  query builder treats it as inert data, never as code — plus an equivalence test proving an
+  AI-translated filter and the identical hand-typed query params return the identical result
+  set through the identical controller code.
+- **Cheap and bounded on purpose.** Model is Haiku (`claude-haiku-4-5`, configurable via
+  `ANTHROPIC_MODEL`) — fast and inexpensive for translating one short sentence. The route is
+  throttled (`throttle:10,1`) and the query is capped at 200 characters, since this runs on a
+  public demo against a real paid API key.
+- **Fails closed and quietly.** No `ANTHROPIC_API_KEY` configured, a network hiccup, or a
+  malformed response all produce the same friendly inline error — the rest of the app, including
+  the manual search box right below it, is completely unaffected.
+
 ## Tech stack
 
 - Laravel 12, SQLite locally / Postgres in production (ships with SQLite — zero setup to run)
 - Vue 3 + Inertia.js + Tailwind CSS (via Laravel Breeze)
+- Anthropic API (Claude Haiku) for natural-language product search
 - Chart.js / vue-chartjs for the dashboard chart
 - PHPUnit feature tests
 
@@ -114,8 +155,11 @@ php artisan test
 ```
 
 Covers the pipeline's happy path, its skip/validation logic (missing SKU, unknown SKU, invalid
-quantity, invalid date), SKU normalization, the product listing/search endpoint, and the admin
-inventory endpoints (403 for non-admins, successful adjustment, validation).
+quantity, invalid date), SKU normalization, the product listing/search endpoint, the admin
+inventory endpoints (403 for non-admins, successful adjustment, validation), and the AI search
+endpoint (`Http::fake()`-stubbed — no real Anthropic calls in the suite): happy path, malformed/
+missing tool response, connection failure, rate limiting, out-of-range and prompt-injection-shaped
+values from the model, and the AI-vs-hand-typed equivalence test described above.
 
 ## Live demo & deployment
 
@@ -144,6 +188,11 @@ after being idle.
    - `APP_URL` — the Render-assigned URL, once you have it
    - `APP_ENV=production`, `APP_DEBUG=false`
    - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — your choice; nothing admin-related is ever committed
+   - `ANTHROPIC_API_KEY` — from [console.anthropic.com](https://console.anthropic.com), powers
+     natural-language product search. Optional in the sense that the rest of the app works fine
+     without it — that one feature just shows a friendly error instead.
+   - `ANTHROPIC_MODEL` — defaults to `claude-haiku-4-5-20251001` if unset; only needed if you
+     want to point it at a different model
 4. After the first deploy, open Render's Shell tab once and run:
    ```bash
    php artisan db:seed --force
