@@ -208,6 +208,23 @@ after being idle.
 From then on, pushing to `main` auto-redeploys and picks up any new migrations. Data persists
 in Neon independent of whatever Render's container does.
 
+**Two more lessons learned adding the AI search feature, both now fixed in this repo:**
+
+- **Set `LOG_STACK=stderr`.** Laravel's default (`single`) writes to `storage/logs/laravel.log`
+  — a file inside the ephemeral container, invisible to Render's Logs tab, which only captures
+  stdout/stderr. Without this, an application-level exception (a bad API key, a bug) fails
+  silently as far as the dashboard is concerned — confirmed directly: a real error was
+  happening, the response was a 500, and nothing showed up in Render's logs until this was set.
+- **`php -S`'s single-worker default doesn't hold up once a request can be slow.** Every route
+  before the AI search feature was a fast local DB query; the built-in PHP server handling one
+  request at a time was never a problem. A real outbound call to Anthropic (a few seconds, not
+  milliseconds) changes that — a slow request blocks every other request behind it, including
+  Render's own health check, which can present as intermittent, hard-to-reproduce 500s/503s
+  under any concurrent load. `docker-entrypoint.sh` now sets `PHP_CLI_SERVER_WORKERS=4` before
+  starting the server (supported since PHP 7.4) so a handful of requests can actually run
+  concurrently — confirmed locally by firing 5 concurrent requests and checking they complete
+  in parallel rather than serially.
+
 ## CI
 
 `.github/workflows/ci.yml` runs the PHPUnit suite on every push to `main`, then (on success)

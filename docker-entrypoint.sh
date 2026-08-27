@@ -15,4 +15,12 @@ php artisan migrate --force
 # The router script resolves the public path via getcwd(), exactly like
 # `artisan serve` relies on — so this has to run from public/, not the app root.
 cd public
+
+# php -S handles one request at a time by default. That was fine when every request was a fast
+# local DB query, but the AI search feature makes a real blocking outbound HTTP call (to
+# Anthropic) that can take a few seconds — during which a single-worker server queues every
+# other request behind it, including Render's own health check. PHP_CLI_SERVER_WORKERS (7.4+)
+# forks a small worker pool so one slow request doesn't stall the whole container.
+export PHP_CLI_SERVER_WORKERS=4
+
 exec php -S 0.0.0.0:"${PORT:-8080}" ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php

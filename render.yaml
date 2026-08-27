@@ -25,6 +25,11 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: sync
+      # Laravel's default LOG_STACK=single writes to storage/logs/laravel.log — a file inside
+      # the ephemeral container, invisible to Render's Logs tab (which only captures
+      # stdout/stderr). stderr is a channel Laravel already ships; this just points at it.
+      - key: LOG_STACK
+        value: stderr
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
