@@ -20,6 +20,21 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        # Unlike Throughline (API-only, no Vite manifest needed), GreenStock's Blade views use
+        # the @vite() directive — any test that renders one (every Inertia page, via a real
+        # HTTP request in a Feature test) throws "Vite manifest not found" without this.
+        run: npm run build
+
       - name: Prepare environment
         run: |
           cp .env.example .env
